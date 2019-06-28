@@ -29,8 +29,9 @@ Estructura de la consulta API:
 
 'https://zingtree.com/api/agent_sessions/{{apikey}}/{{agent}}/{{start date}}/{{end date}}'
 
-Imporando desde URL Zingtree
+Imporando desde URL Zingtree, sólo el dataframe "sessions" de la lista fuente
 ```{r}
-agentsessions <- fromJSON(txt = "https://zingtree.com/api/agent_sessions/4c92e2fd3f24f25d02308f6b8d7dd53c/*/2019-06-23/2019-06-25")
+agentsessions <- fromJSON(txt = "https://zingtree.com/api/agent_sessions/4c92e2fd3f24f25d02308f6b8d7dd53c/*/2019-06-23/2019-06-25") %>%
+  .$sessions
 ```
 
