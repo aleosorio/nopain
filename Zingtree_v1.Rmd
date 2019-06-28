@@ -1,8 +1,10 @@
 ---
-title: "Zingtree"
+title: "Zingtree Visualizations"
 author: "MAO"
 date: "27-06-2019"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -17,21 +19,34 @@ library(jsonlite)
 
 ## I. Obteniendo Datos de Zingtree
 
-### I.a. Definición de llave de consulta
-
-```{r}
-apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
-```
-
 ### I.b. Sesiones de Agentes
 
 Estructura de la consulta API:
+'https://zingtree.com/api/agent_sessions/{{apikey}}/{{agent}}/{{dateini}}/{{datefin}}'
 
-'https://zingtree.com/api/agent_sessions/{{apikey}}/{{agent}}/{{start date}}/{{end date}}'
-
-Imporando desde URL Zingtree, sólo el dataframe "sessions" de la lista fuente
+Parámetros de consulta:
 ```{r}
-agentsessions <- fromJSON(txt = "https://zingtree.com/api/agent_sessions/4c92e2fd3f24f25d02308f6b8d7dd53c/*/2019-06-23/2019-06-25") %>%
-  .$sessions
+apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
+dateini <- "2019-06-23"
+datefin <- "2019-06-27"
+```
+
+Importando desde URL Zingtree, sólo las variables "session_id", "start_time" y "agent" del dataframe "sessions", desde la lista fuente:
+```{r, message = FALSE}
+agentsessions <- fromJSON(txt = str_c("https://zingtree.com/api/agent_sessions/", apikey, "/*/", dateini, "/", datefin)) %>%
+  .$sessions %>%
+  select(., session_id, start_time, agent)
+```
+
+Extrayendo sólo fecha de la variable "start_time":
+```{r message = FALSE}
+agentsessions$start_time <- str_sub(agentsessions$start_time, 1, 10) %>%
+  as.Date(.)
+```
+
+
+Dataframe obtenida:
+```{r}
+agentsessions
 ```
 
