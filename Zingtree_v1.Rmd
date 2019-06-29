@@ -27,26 +27,26 @@ Estructura de la consulta API:
 Parámetros de consulta:
 ```{r}
 apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
+agent <- "*"
 dateini <- "2019-06-23"
 datefin <- "2019-06-27"
 ```
 
-Importando desde URL Zingtree, sólo las variables "session_id", "start_time" y "agent" del dataframe "sessions", desde la lista fuente:
+Importando desde URL Zingtree, las variables "session_id", "start_time" (renombrándola "session_date") y "agent" del dataframe "sessions", desde la lista fuente:
 ```{r, message = FALSE}
-agentsessions <- fromJSON(txt = str_c("https://zingtree.com/api/agent_sessions/", apikey, "/*/", dateini, "/", datefin)) %>%
+agentsessions <- fromJSON(txt = str_c("https://zingtree.com/api/agent_sessions/", apikey, "/", agent, "/", dateini, "/", datefin)) %>%
   .$sessions %>%
-  select(., session_id, start_time, agent)
+  select(., session_id, session_date = start_time, agent)
 ```
 
-Extrayendo sólo fecha de la variable "start_time":
+Eliminando hora y dejando sólo la fecha de la variable "session_date".  Luego cambiando a formato 'date':
 ```{r message = FALSE}
-agentsessions$start_time <- str_sub(agentsessions$start_time, 1, 10) %>%
+agentsessions$session_date <- str_sub(agentsessions$session_date, 1, 10) %>%
   as.Date(.)
 ```
 
-
 Dataframe obtenida:
 ```{r}
-agentsessions
+str(agentsessions, 5)
 ```
 
