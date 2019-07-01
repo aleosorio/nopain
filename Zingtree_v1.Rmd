@@ -65,7 +65,8 @@ https://zingtree.com/api/session/{{session_id}}/get_session_data
 
 ```{r}
 get_session_data <- function(session_id) {
-  fromJSON(txt = str_c("https://zingtree.com/api/session/", session_id, "/get_session_data"))
+  fromJSON(txt = str_c("https://zingtree.com/api/session/", session_id, "/get_session_data")) %>%
+  .$path
 }
 ```
 
