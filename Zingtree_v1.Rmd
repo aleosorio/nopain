@@ -30,7 +30,7 @@ Parámetros de consulta:
 apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
 agent <- "*"
 dateini <- "2019-06-23"
-datefin <- "2019-06-27"
+datefin <- "2019-07-01"
 ```
 
 Importando desde URL Zingtree, las variables "session_id", "start_time" (renombrándola "session_date") y "agent" del dataframe "sessions", desde la lista fuente:
