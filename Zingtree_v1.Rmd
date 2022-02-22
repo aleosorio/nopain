@@ -49,7 +49,7 @@ agent_sessions$session_date <- str_sub(agent_sessions$session_date, 1, 10) %>%
 ```
 
 Dataframe obtenida:
-```{r, echo = FALSE}
+```{r, echo = TRUE}
 str(agent_sessions, 5)
 ```
 
@@ -59,27 +59,39 @@ str(agent_sessions, 5)
 - **Estructura de consulta API**:
 https://zingtree.com/api/session/{{session_id}}/get_form_data
 
-#### I.b.i. Función de extracción para un sesion_id
+#### I.b.i. Función de extracción de un registro para un sesion_id
 
-- **Parámetros**: session_id
+- **Variable**: session_id
 - **Input**: JSON de Zingtree
-- **Output**: Lista
+- **Output**: Tibble con 1 registro
 
 ```{r}
+
 get_form_data <- function(session_id) {
-  fromJSON(txt = str_c("https://zingtree.com/api/session/", session_id, "/get_form_data"))
+  fromJSON(txt = str_c("https://zingtree.com/api/session/", session_id, "/get_form_data")) %>%
+    as_tibble(.)
 }
 ```
 
-#### I.b.ii. Extracción de primera sesión de "agent_sessions" mediante función "get_session_data"
+#### I.b.ii. Confexión de Tibble en base a detalle de sesiones en agent_sessions, mediante función get_form_data
 
-- **Variable**: agent_sessions$session_id[1]
-- **output**: Lista con un registro
-
+Confexión del tibble
 ```{r}
-get_form_data(agent_sessions$session_id[1]) %>%
-  as_tibble(.) %>%
-  str(.)
+form_data <- tibble()
+for(i in 1:nrow(agent_sessions)) {
+  form_data <- bind_rows(form_data, get_form_data(agent_sessions$session_id[i]))
+}
+```
+
+Limpieza de campos NA del Tibble
+```{r}
+form_data[is.na(form_data)] <- ""
+```
+
+Ordenamiento alfabético de columnas del Tibble
+```{r}
+form_data <- select(form_data, order(colnames(form_data)))
+head(form_data, 5)
 ```
 
 
