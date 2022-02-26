@@ -30,8 +30,8 @@ Parámetros de consulta:
 ```{r}
 apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
 agent <- "*"
-dateini <- "2022-02-14"
-datefin <- "2022-02-15"
+dateini <- "2022-02-21"
+datefin <- "2022-02-25"
 ```
 
 Importando desde URL Zingtree, las variables "session_id", "start_time" (renombrándola "session_date") y "agent" del dataframe "sessions", desde la lista fuente:
@@ -50,7 +50,7 @@ agent_sessions$session_date <- str_sub(agent_sessions$session_date, 1, 10) %>%
 
 Dataframe obtenida:
 ```{r, echo = TRUE}
-str(agent_sessions, 5)
+head(agent_sessions, 5)
 ```
 
 ### I.b. Data de sesiones por session_id (de consulta anterior)
@@ -73,25 +73,57 @@ get_form_data <- function(session_id) {
 }
 ```
 
-#### I.b.ii. Confexión de Tibble en base a detalle de sesiones en agent_sessions, mediante función get_form_data
+#### I.b.ii. Confexión de Tibble para un registro (reg), en base a diferentes CritMov, Sympt_Diagn_Sol y TGs, mediante I.b.i
 
-Confexión del tibble
+Tibble Inicial, en base a una sola sesión:
 ```{r}
-form_data <- tibble()
-for(i in 1:nrow(agent_sessions)) {
-  form_data <- bind_rows(form_data, get_form_data(agent_sessions$session_id[i]))
+reg <- 2
+session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
+  select(., order(colnames(.))) %>%
+  mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
+```
+
+Crit_MOv:
+```{r}
+crit_mov <- session_data %>%
+  select(., -(starts_with("Sympt_Diagn_Sol") | starts_with("TG"))) %>%
+  gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value")
+```
+
+Sympt_Diagn_Sol:
+```{r}
+Sympt_Diagn_Sol <- session_data %>%
+  select(., Session, starts_with("Sympt_Diagn_Sol")) %>%
+  gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value")
+```
+
+TG - gestos: Variables de session_data, cuyo nombre contenga "TG" y termine con un número (ej: TG_1_1_1)
+```{r}
+gestos <- session_data %>%
+  colnames(.) %>%
+  str_subset(., "TG") %>%
+  str_subset(., "[:digit:]$")
+```
+
+TG - zonas: Patrón en base a gestos con primeros 5 digitos iguales (ej: TG1_1)
+```{r}
+zonas <- gestos %>%
+  str_sub(., start = 1, end = 5) %>%
+  unique(.)
+```
+
+TG - Tibble: Sesión con vectores de gestos anidados, en base a zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).  PENDIENTE LOGRAR FUSIONAR LISTAS EN UN SOLO TIBBLE
+```{r}
+TG <- tibble()
+for(i in 1:length(zonas)) {
+  TGloop1 <- session_data %>%
+    select(., str_subset(gestos, zonas[1])) %>%
+    pivot_longer(., cols = colnames(.[2:ncol(.)]), names_to = "TG", values_to = "TG_Val") %>%
+    list(Session = session_data$Session, TGs = .)
+  TG <- bind_rows(TG, TGloop)
 }
 ```
 
-Limpieza de campos NA del Tibble
-```{r}
-form_data[is.na(form_data)] <- ""
-```
 
-Ordenamiento alfabético de columnas del Tibble
-```{r}
-form_data <- select(form_data, order(colnames(form_data)))
-head(form_data, 5)
-```
 
 
