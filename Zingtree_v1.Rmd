@@ -73,9 +73,9 @@ get_form_data <- function(session_id) {
 }
 ```
 
-#### I.b.ii. Tibble para un registro (reg), en base a diferentes CritMov, Sympt_Diagn_Sol y TGs
+#### I.b.ii. Tibble para un registro (reg), en base a tibbles CritMov, Sympt_Diagn_Sol y TGs
 
-Tibble Inicial, en base a una sola sesión:
+Tibble inicial, en base a una sola sesión:
 ```{r}
 reg <- 4
 session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
@@ -83,18 +83,36 @@ session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
   mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
 ```
 
-Crit_MOv:
+Crit_Mov:
 ```{r}
-crit_mov <- session_data %>%
-  select(., -(starts_with("Sympt_Diagn_Sol") | starts_with("TG"))) %>%
-  gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value")
+numcritmov <- session_data %>%
+  colnames(.) %>%
+  str_subset(., "CritMov") %>%
+  length(.)
+
+if (numcritmov > 0) {
+  crit_mov <- session_data %>%
+      select(., -(starts_with("Sympt_Diagn_Sol") | starts_with("TG"))) %>%
+      gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value")
+} else {
+  crit_mov <- mutate(session_data, CritMov = "", CritMov_Value = "")
+}
 ```
 
 Sympt_Diagn_Sol:
 ```{r}
-Sympt_Diagn_Sol <- session_data %>%
-  select(., Session, starts_with("Sympt_Diagn_Sol")) %>%
-  gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value")
+numsympt <- session_data %>%
+  colnames(.) %>%
+  str_subset(., "Sympt_Diagn_Sol") %>%
+  length(.)
+
+if (numsympt > 0) {
+  sympt_diagn_sol <- session_data %>%
+      select(., Session, starts_with("Sympt_Diagn_Sol")) %>%
+      gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value")
+} else {
+  sympt_diagn_sol <- tibble(Session = session_data$Session[[1]], Sympt_Diagn_Sol = "", Sympt_Diagn_Sol_Value = "")
+}
 ```
 
 TG - gestos: Vector de nombres de session_data, que contengan "TG" y terminen con un número (ej: TG_1_1_1)
@@ -115,6 +133,7 @@ zonas <- gestos %>%
 TG - Tibble: Sesión con vectores de gestos anidados, en base a zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).
 ```{r}
 numzonas <- length(zonas)
+
 if (numzonas > 0) {
   TG <- tibble()
   for(i in 1:length(zonas)) {
@@ -129,6 +148,10 @@ if (numzonas > 0) {
 }
 ```
 
+Tibble final, en base a una sola sesión: PENDIENTE
+```{r}
+
+```
 
 
 
