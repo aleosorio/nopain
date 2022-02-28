@@ -77,7 +77,7 @@ get_form_data <- function(session_id) {
 
 Tibble inicial, en base a una sola sesión:
 ```{r}
-reg <- 4
+reg <- 1
 session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
   select(., order(colnames(.))) %>%
   mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
@@ -93,9 +93,12 @@ numcritmov <- session_data %>%
 if (numcritmov > 0) {
   crit_mov <- session_data %>%
       select(., -(starts_with("Sympt_Diagn_Sol") | starts_with("TG"))) %>%
-      gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value")
+      gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value") %>%
+      mutate(., Rama = str_sub(CritMov, start =9, end =11), .after = Session)
 } else {
-  crit_mov <- mutate(session_data, CritMov = "", CritMov_Value = "")
+  crit_mov <- session_data %>%
+    mutate(., CritMov = "", CritMov_Value = "") %>%
+    mutate(., Rama = "", .after = Session)
 }
 ```
 
@@ -109,9 +112,11 @@ numsympt <- session_data %>%
 if (numsympt > 0) {
   sympt_diagn_sol <- session_data %>%
       select(., Session, starts_with("Sympt_Diagn_Sol")) %>%
-      gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value")
+      gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value") %>%
+      mutate(., Rama = str_sub(Sympt_Diagn_Sol, start = 17, end = 19), .after = Session)
 } else {
-  sympt_diagn_sol <- tibble(Session = session_data$Session[[1]], Sympt_Diagn_Sol = "", Sympt_Diagn_Sol_Value = "")
+  sympt_diagn_sol <- tibble(Session = session_data$Session[[1]], Sympt_Diagn_Sol = "", Sympt_Diagn_Sol_Value = "") %>%
+    mutate(., Rama = "", .after = Session)
 }
 ```
 
@@ -139,18 +144,20 @@ if (numzonas > 0) {
   for(i in 1:length(zonas)) {
       TGloop <- session_data %>%
             select(., Session, str_subset(gestos, zonas[i])) %>%
-            pivot_longer(., cols = colnames(.[2:ncol(.)]), names_to = "TG", values_to = "TG_Val") %>%
-            nest(., Data = 2:3)
+            mutate(., Rama = str_sub(zonas[[i]], start = 3, end = 5), .after = Session) %>%
+            pivot_longer(., cols = colnames(.[3:ncol(.)]), names_to = "TG", values_to = "TG_Val") %>%
+            nest(., TGs = 3:4)
         TG <- bind_rows(TG, TGloop)
   }
 } else {
-  TG <- tibble(Session = session_data$Session[[1]], Data = list(tibble(TG = "", TG_Val = "")))
+  TG <- tibble(Session = session_data$Session[[1]], Rama = "", TGs = list(tibble(TG = "", TG_Val = "")))
 }
 ```
 
-Tibble final, en base a una sola sesión: PENDIENTE
+Tibble final, en base a inner_join de tablas crit_mov, sympt_diagn_sol y TG:
 ```{r}
-
+session_tibble <- inner_join(crit_mov, sympt_diagn_sol, by = c("Session", "Rama")) %>%
+  inner_join(., TG, by = c("Session", "Rama"))
 ```
 
 
