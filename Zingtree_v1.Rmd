@@ -75,15 +75,16 @@ get_form_data <- function(session_id) {
 
 #### I.b.ii. Tibble para un registro (reg), en base a tibbles CritMov, Sympt_Diagn_Sol y TGs
 
-Tibble inicial, en base a una sola sesión:
+Tibble de una sesión de session_data, obtenida vía API get_form_data, de Zingtree (se le suma columna ID, "Session", al principio):
+
 ```{r}
-reg <- 1
+reg <- 2
 session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
   select(., order(colnames(.))) %>%
   mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
 ```
 
-Crit_Mov:
+Función Crit_Mov, que crea Tibble de movimientos críticos (varios a una), a partir de un registro de session_data:
 ```{r}
 numcritmov <- session_data %>%
   colnames(.) %>%
@@ -102,7 +103,7 @@ if (numcritmov > 0) {
 }
 ```
 
-Sympt_Diagn_Sol:
+Función Sympt_Diagn_Sol.  Idem Crit_MOv, para movimientos críticos de la sesión (1 o más):
 ```{r}
 numsympt <- session_data %>%
   colnames(.) %>%
@@ -120,7 +121,10 @@ if (numsympt > 0) {
 }
 ```
 
-TG - gestos: Vector de nombres de session_data, que contengan "TG" y terminen con un número (ej: TG_1_1_1)
+
+Función TG: Idem anteriores, para gestos técnicos.  Última variable (TGs) es en base a listas de Tibbles (1 a varios gestos técnicos e intensidades).  Se construye en base a vectores de gestos (detalle por sesión) y zonas (ramas del árbol por las que se pasea durante una sesión):
+
+1. TG - gestos: Vector de nombres de session_data, que contengan "TG" y terminen con un número (ej: TG_1_1_1)
 ```{r}
 gestos <- session_data %>%
   colnames(.) %>%
@@ -128,14 +132,14 @@ gestos <- session_data %>%
   str_subset(., "[:digit:]$")
 ```
 
-TG - zonas: Vector con patrones de gestos, en base a primeros 5 digitos iguales (ej: TG1_1)
+2. TG - zonas: Vector con patrones de gestos, en base a primeros 5 digitos iguales (ej: TG1_1)
 ```{r}
 zonas <- gestos %>%
   str_sub(., start = 1, end = 5) %>%
   unique(.)
 ```
 
-TG - Tibble: Sesión con vectores de gestos anidados, en base a zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).
+3. TG - Tibble: Idem anteriores funciones, para gestos técnicos, mediante vectores anidados en base a zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).
 ```{r}
 numzonas <- length(zonas)
 
@@ -154,7 +158,7 @@ if (numzonas > 0) {
 }
 ```
 
-Tibble final, en base a inner_join de tablas crit_mov, sympt_diagn_sol y TG:
+Tibble final de sesión única, en base a inner_join de tablas crit_mov, sympt_diagn_sol y TG:
 ```{r}
 session_tibble <- inner_join(crit_mov, sympt_diagn_sol, by = c("Session", "Rama")) %>%
   inner_join(., TG, by = c("Session", "Rama"))
