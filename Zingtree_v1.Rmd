@@ -26,31 +26,22 @@ library(magrittr)
 - **Estructura de consulta API**:
 'https://zingtree.com/api/agent_sessions/{{apikey}}/{{agent}}/{{dateini}}/{{datefin}}'
 
-Parámetros de consulta:
-```{r}
-apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
-agent <- "*"
-dateini <- "2022-02-21"
-datefin <- "2022-02-25"
-```
+Donde:
+apikey = Clave de acceso para realizar la consulta API
+agent = Agentes a considerar en la consulta (* son todos)
+dateini y datefin = fechas de inicio y término de la consulta
 
-Importando desde URL Zingtree, las variables "session_id", "start_time" (renombrándola "session_date") y "agent" del dataframe "sessions", desde la lista fuente:
+Función de extracción de sesiones (agent_sessions) para un período (entre dateini y datefin):
 ```{r, message = FALSE}
-agent_sessions <- fromJSON(txt = str_c("https://zingtree.com/api/agent_sessions/", apikey, "/", agent, "/", dateini, "/", datefin)) %>%
-  .$sessions %>%
-  select(., session_id, session_date = start_time, agent) %>%
-  as_tibble(.)
-```
 
-Eliminando hora y dejando sólo la fecha de la variable "session_date".  Luego cambiando a formato 'date':
-```{r message = FALSE}
-agent_sessions$session_date <- str_sub(agent_sessions$session_date, 1, 10) %>%
-  as.Date(.)
-```
+Agent_Sessions <- function (apikey, agent, dateini, datefin) {
 
-Dataframe obtenida:
-```{r, echo = TRUE}
-head(agent_sessions, 5)
+  #Importando desde URL Zingtree, las variables "session_id", "start_time" (renombrándola "session_date") y "agent", desde la lista fuente:
+  agent_sessions <- fromJSON(txt = str_c("https://zingtree.com/api/agent_sessions/", apikey, "/", agent, "/", dateini, "/", datefin)) %>%
+    .$sessions %>%
+    select(., session_id, session_date = start_time, agent) %>%
+    as_tibble(.)
+}
 ```
 
 ### I.b. Data de sesiones por session_id (de consulta anterior)
@@ -66,103 +57,164 @@ https://zingtree.com/api/session/{{session_id}}/get_form_data
 - **Output**: Tibble con 1 registro
 
 ```{r}
-
-get_form_data <- function(session_id) {
+Get_Form_Data <- function(session_id) {
   fromJSON(txt = str_c("https://zingtree.com/api/session/", session_id, "/get_form_data")) %>%
     as_tibble(.)
 }
 ```
 
-#### I.b.ii. Tibble para un registro (reg), en base a tibbles CritMov, Sympt_Diagn_Sol y TGs
-
-Tibble de una sesión de session_data, obtenida vía API get_form_data, de Zingtree (se le suma columna ID, "Session", al principio):
-
-```{r}
-reg <- 2
-session_data <- get_form_data(agent_sessions$session_id[reg]) %>%
-  select(., order(colnames(.))) %>%
-  mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
-```
-
 Función Crit_Mov, que crea Tibble de movimientos críticos (varios a una), a partir de un registro de session_data:
 ```{r}
-numcritmov <- session_data %>%
-  colnames(.) %>%
-  str_subset(., "CritMov") %>%
-  length(.)
+Crit_Mov <- function(session_data) {
 
-if (numcritmov > 0) {
-  crit_mov <- session_data %>%
+  # Parámetro para distinguir sesiones sin movimientos críticos:
+  numcritmov <- session_data %>%
+    colnames(.) %>%
+    str_subset(., "CritMov") %>%
+    length(.)
+
+  # Función propiamente tal:
+  if (numcritmov > 0) {
+    crit_mov <- session_data %>%
       select(., -(starts_with("Sympt_Diagn_Sol") | starts_with("TG"))) %>%
       gather(., which(str_starts(colnames(.), "CritMov")), key = "CritMov", value = "CritMov_Value") %>%
       mutate(., Rama = str_sub(CritMov, start =9, end =11), .after = Session)
-} else {
-  crit_mov <- session_data %>%
-    mutate(., CritMov = "", CritMov_Value = "") %>%
-    mutate(., Rama = "", .after = Session)
+    return(crit_mov)
+  } else {
+    crit_mov <- session_data %>%
+      mutate(., CritMov = "", CritMov_Value = "") %>%
+      mutate(., Rama = "", .after = Session)
+    return(crit_mov)
+  }
+
 }
 ```
 
 Función Sympt_Diagn_Sol.  Idem Crit_MOv, para movimientos críticos de la sesión (1 o más):
 ```{r}
-numsympt <- session_data %>%
-  colnames(.) %>%
-  str_subset(., "Sympt_Diagn_Sol") %>%
-  length(.)
-
-if (numsympt > 0) {
-  sympt_diagn_sol <- session_data %>%
+Sympt_Diagn_Sol <- function (session_data) {
+  
+  # Parámetro para distinguir sesiones sin síntomas: 
+  numsympt <- session_data %>%
+    colnames(.) %>%
+    str_subset(., "Sympt_Diagn_Sol") %>%
+    length(.)
+  
+  # Función propiamente tal:
+  if (numsympt > 0) {
+    sympt_diagn_sol <- session_data %>%
       select(., Session, starts_with("Sympt_Diagn_Sol")) %>%
       gather(., which(str_starts(colnames(.), "Sympt_Diagn_Sol")), key = "Sympt_Diagn_Sol", value = "Sympt_Diagn_Sol_Value") %>%
       mutate(., Rama = str_sub(Sympt_Diagn_Sol, start = 17, end = 19), .after = Session)
-} else {
-  sympt_diagn_sol <- tibble(Session = session_data$Session[[1]], Sympt_Diagn_Sol = "", Sympt_Diagn_Sol_Value = "") %>%
-    mutate(., Rama = "", .after = Session)
-}
-```
-
-
-Función TG: Idem anteriores, para gestos técnicos.  Última variable (TGs) es en base a listas de Tibbles (1 a varios gestos técnicos e intensidades).  Se construye en base a vectores de gestos (detalle por sesión) y zonas (ramas del árbol por las que se pasea durante una sesión):
-
-1. TG - gestos: Vector de nombres de session_data, que contengan "TG" y terminen con un número (ej: TG_1_1_1)
-```{r}
-gestos <- session_data %>%
-  colnames(.) %>%
-  str_subset(., "TG") %>%
-  str_subset(., "[:digit:]$")
-```
-
-2. TG - zonas: Vector con patrones de gestos, en base a primeros 5 digitos iguales (ej: TG1_1)
-```{r}
-zonas <- gestos %>%
-  str_sub(., start = 1, end = 5) %>%
-  unique(.)
-```
-
-3. TG - Tibble: Idem anteriores funciones, para gestos técnicos, mediante vectores anidados en base a zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).
-```{r}
-numzonas <- length(zonas)
-
-if (numzonas > 0) {
-  TG <- tibble()
-  for(i in 1:length(zonas)) {
-      TGloop <- session_data %>%
-            select(., Session, str_subset(gestos, zonas[i])) %>%
-            mutate(., Rama = str_sub(zonas[[i]], start = 3, end = 5), .after = Session) %>%
-            pivot_longer(., cols = colnames(.[3:ncol(.)]), names_to = "TG", values_to = "TG_Val") %>%
-            nest(., TGs = 3:4)
-        TG <- bind_rows(TG, TGloop)
+    return(sympt_diagn_sol)
+  } else {
+    sympt_diagn_sol <- tibble(Session = session_data$Session[[1]], Sympt_Diagn_Sol = "", Sympt_Diagn_Sol_Value = "") %>%
+      mutate(., Rama = "", .after = Session)
+    return(sympt_diagn_sol)
   }
-} else {
-  TG <- tibble(Session = session_data$Session[[1]], Rama = "", TGs = list(tibble(TG = "", TG_Val = "")))
+
 }
 ```
 
-Tibble final de sesión única, en base a inner_join de tablas crit_mov, sympt_diagn_sol y TG:
+Función TG y sus parámetros: Idem anteriores, para gestos técnicos, mediante vectores con detalle de gestos técnicos, anidados por zonas (ej de un vector: TG1_1_1, TG1_1_2, etc.).  Última variable (TGs) es en base a listas de Tibbles (1 a varios gestos técnicos e intensidades).  Se construye en base a vectores de gestos (detalle por sesión) y zonas (ramas del árbol por las que se pasea durante una sesión):
+
 ```{r}
-session_tibble <- inner_join(crit_mov, sympt_diagn_sol, by = c("Session", "Rama")) %>%
-  inner_join(., TG, by = c("Session", "Rama"))
+Tech_Gest <- function (session_data) {
+
+  # Vector de gestos técnicos de misma rama, es decir, que contengan "TG" y terminen con un número (ej: TG_1_1_1):
+  gestos <- session_data %>%
+    colnames(.) %>%
+    str_subset(., "TG") %>%
+    str_subset(., "[:digit:]$")
+
+  # Vector con ramas, es decir, conjuntos de gestos técnicos para un diagnóstico (en base a primeros 5 digitos iguales -ej: TG1_1-):
+  zonas <- gestos %>%
+    str_sub(., start = 1, end = 5) %>%
+    unique(.)
+
+  # Parámetro para distinguir sesiones sin ramas ni, por tanto, sin gestos técnicos:
+  numzonas <- length(zonas)
+
+  # Función propiamente tal:
+  if (numzonas > 0) {
+    TG <- tibble()
+    for(i in 1:length(zonas)) {
+      TGloop <- session_data %>%
+        select(., Session, str_subset(gestos, zonas[i])) %>%
+        mutate(., Rama = str_sub(zonas[[i]], start = 3, end = 5), .after = Session) %>%
+        pivot_longer(., cols = colnames(.[3:ncol(.)]), names_to = "TG", values_to = "TG_Val") %>%
+        nest(., TGs = 3:4)
+      TG <- bind_rows(TG, TGloop)
+    }
+    return(TG)
+  } else {
+    TG <- tibble(Session = session_data$Session[[1]], Rama = "", TGs = list(tibble(TG = "", TG_Val = "")))
+    return(TG)
+  }
+
+}
 ```
 
+### Consulta Final
 
+Parámetros de consulta:
+```{r}
+apikey <- "4c92e2fd3f24f25d02308f6b8d7dd53c"
+agent <- "*"
+dateini <- "2022-02-21"
+datefin <- "2022-02-25"
+```
 
+Tabla con detalle de sesiones para el período dateini - datefin:
+```{r}
+agent_sessions <- Agent_Sessions (apikey, agent, dateini, datefin)
+
+  #Eliminando hora y dejando sólo la fecha de la variable "session_date".  Luego cambiando a formato 'date':
+  agent_sessions$session_date <- str_sub(agent_sessions$session_date, 1, 10) %>%
+    as.Date(.)
+
+  #Tibble obtenido:
+  head(agent_sessions, 5)
+```
+
+Loop para totalidad de sesiones del período:
+```{r}
+#Número de sesiones del período:
+numsessions <- length(agent_sessions$session_id)
+
+#Tibble consolidado del período, vacío:
+tibble_total <- tibble(Session = "", Rama = "")
+
+#Loop
+for (reg in 1:numsessions) {
+
+  #Tibble con detalle de cada sesión (reg):
+  session_data <- Get_Form_Data(agent_sessions$session_id[reg]) %>%
+    select(., order(colnames(.))) %>%
+    mutate(., Session = agent_sessions$session_id[reg], .before = colnames(.)[1])
+  
+  #Tibble con movimientos críticos de cada sesión (reg):
+  crit_mov <- Crit_Mov(session_data)
+
+  #Tibble con síntomas, diagnósticos y soluciones de cada sesión (reg):
+  sympt_diagn_sol <- Sympt_Diagn_Sol(session_data)
+
+  #Tibble con gestos técnicos de cada sesión (reg):
+  TG <- Tech_Gest(session_data)
+
+  #Tibble de una sesión (reg), en base a inner_join de tablas crit_mov, sympt_diagn_sol y TG:
+  tibble_session <- inner_join(crit_mov, sympt_diagn_sol, by = c("Session", "Rama")) %>%
+    inner_join(., TG, by = c("Session", "Rama"))
+
+#Tibble del período (, en base a la (unión de los tibble_session del loop anterior), limpio de NAs y variables 3 en adelante, alfabéticamente:
+tibble_total <- bind_rows(tibble_total, tibble_session) %>%
+  replace(., is.na(.), "") %>%
+  select(., order(colnames(.))) %>%
+  relocate(., c("Session", "Rama"), .before = colnames(.)[[1]])
+}
+
+#Tibble obtenido:
+head(tibble_total, 5)
+
+```
+PENDIENTE ELIMINAR PRIMERA FILA (VER DE QUE SE CONSTRUYA SIN NULL EN COLUMNA TGs, PARA LUEGO ELIMINAR FILAS CON 100% VALORES = "")
