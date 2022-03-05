@@ -1,0 +1,27 @@
+---
+title: "Informes Diagnóstico"
+author: "MAO"
+date: "03-03-2022"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE}
+library(tinytex)
+```
+
+`r if(tibble_final$FormFill[[1]] == "Sí") {"\\begin{comment}"}`
+
+PROFESIONAL DE LA SALUD: `tibble_final$Professional[1]`
+---
+
+| Right | Left | Default | Center | 
+|-------:|:------|-----------|:---------:| 
+| 12 | 12 | 12 | 12 | 
+| 123 | 123 | 123 | 123 | 
+| 1 | 1 | 1 | 1 |
+
+`r if(tibble_final$FormFill[[1]] == "Sí") {"\\end{comment}"}`
