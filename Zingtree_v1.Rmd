@@ -1,7 +1,7 @@
 ---
-title: "Zingtree Visualizations"
+title: "Zingtree Data"
 author: "MAO"
-date: "27-06-2019"
+date: "03-03-2022"
 output:
   pdf_document: default
   html_document: default
@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 Librerías:
-```{r, message = FALSE}
+```{r, include = FALSE}
 library(tidyverse)
 library(jsonlite)
 library(magrittr)
