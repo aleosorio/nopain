@@ -240,3 +240,41 @@ head(tibble_final, 5)
 
 ```
 
+## IV. Rendering 1 Informe PDF por cada sesión de tibble_final
+
+```{r, include = FALSE}
+rending <- TRUE
+
+# IMC: PENDIENTE Ajustar cálculo según disponibilidad de variables
+imc <- as.numeric(tibble_final$Weight[[1]])/ (as.numeric(tibble_final$Height[[1]])/100)^2
+
+# Trauma: Si es TRUE, activa tabla con detalles del trauma, en Infos_Diagnostico
+trauma <- if_else(tibble_final$Trauma[[1]] == "Sí", TRUE, FALSE)
+
+rmarkdown::render('Infos_Diagnostico.Rmd',
+                  params = list(
+                    var_comment = rending,
+                    Professional = tibble_final$Professional[[1]],
+                    ID_Code = tibble_final$ID_Code[[1]],
+                    Genre = tibble_final$Genre[[1]],
+                    Sex = tibble_final$Sex[[1]],
+                    Age = tibble_final$Age[[1]],
+                    Height = tibble_final$Height[[1]],
+                    Weight = tibble_final$Weight[[1]],
+                    IMC = imc,
+                    Biotype = tibble_final$Biotype[[1]],
+                    FatPerc = tibble_final$FatPerc[[1]],
+                    FatPercProxy = tibble_final$FatPercProxy[[1]],
+                    Period = tibble_final$Period[[1]],
+                    Pregnancy = tibble_final$Pregnancy[[1]],
+                    Trauma = trauma,
+                    TraumaType = tibble_final$TraumaType[[1]],
+                    TraumaType_Txt = tibble_final$TraumaType_Txt[[1]],
+                    TraumaWhen = tibble_final$TraumaWhen[[1]],
+                    TraumaTreatment = tibble_final$TraumaTreatment[[1]],
+                    TraumaDiagnostic_Txt = tibble_final$TraumaDiagnostic_Txt[[1]],
+                    TraumaTreatment_Txt = tibble_final$TraumaTreatment_Txt[[1]]),
+                  output_file = "rendingTRUE.pdf")
+
+```
+
