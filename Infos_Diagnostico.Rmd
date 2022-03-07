@@ -3,6 +3,31 @@ title: "Informes Diagnóstico"
 author: "MAO"
 date: "03-03-2022"
 output: pdf_document
+header-includes:
+  - \usepackage{comment}
+params:
+  var_comment: FALSE
+  Professional: No Especificado
+  ID_Code: No Especificado
+  Genre: No Especificado
+  Sex: No Especificado
+  Age: No Especificado
+  Height: No Especificado
+  Weight: No Especificado
+  IMC: No Especificado
+  Biotype: No Especificado
+  FatPerc: No Especificado
+  FatPercProxy: No Especificado
+  Period: No Especificado
+  Pregnancy: No Especificado
+  Trauma: FALSE
+  TraumaType: No Especificado
+  TraumaType_Txt: No Especificado
+  TraumaWhen: No Especificado
+  TraumaTreatment: No Especificado
+  TraumaDiagnostic_Txt: No Especificado
+  TraumaTreatment_Txt: No Especificado
+  
 ---
 
 ```{r setup, include = FALSE}
@@ -13,10 +38,65 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tinytex)
 ```
 
-`r if(tibble_final$FormFill[[1]] == "Sí") {"\\begin{comment}"}`
+## Profesional de la Salud: `r params$Professional`
 
-PROFESIONAL DE LA SALUD: `tibble_final$Professional[1]`
----
+## Datos del Paciente
+
+|   |   |
+|:----------------------------------|---------:| 
+|**Código Paciente**:|`r params$ID_Code`|
+|**Género**:|`r params$Genre`|
+|**Sexo**:|`r params$Sex`|
+|**Edad**:|`r params$Age`|
+|**Altura (mts)**:|`r params$Height`|
+|**Peso (kgs)**:|`r params$Weight`|
+|**IMC**:|`r params$IMC`|
+
+**Biotipo**: `r params$Biotype`
+
+
+
+
+
+**% Grasa**:
+
+|   |   |
+|:----------------------------------|---------:| 
+|**Real**:|`r params$FatPerc`|
+|**Proxy**:|`r params$FatPercProxy`|
+
+
+
+
+
+**Período**:
+
+|   |   |
+|:----------------------------------|---------:| 
+|**Última Regla (semanas)**:|`r params$Period`|
+|**Embarazo**:|`r params$Pregnancy`|
+
+
+**Antecedentes de Trauma**: `r if_else(params$Trauma, "Aplica", "No Aplica")`
+
+`r if(!params$Trauma) {"\\begin{comment}"}`
+
+**Detalles del trauma**:
+
+|   |   |
+|:----------------------------------|---------:| 
+|**Tipo de trauma**:|`r params$TraumaType`|
+|**Descripción del trauma**:|`r params$TraumaType_Txt`|
+|**Antigüedad del trauma**:|`r params$TraumaWhen`|
+|**Tratamiento del trauma**:|`r params$TraumaTreatment`|
+|**Diagnóstico del trauma**:|`r params$TraumaDiagnostic_Txt`|
+|**Detalle del tratamiento**:|`r params$TraumaTreatment_Txt`|
+
+`r if(!params$Trauma) {"\\end{comment}"}`
+
+
+`r if(!params$var_comment) {"\\begin{comment}"}`
+
 
 | Right | Left | Default | Center | 
 |-------:|:------|-----------|:---------:| 
@@ -24,4 +104,4 @@ PROFESIONAL DE LA SALUD: `tibble_final$Professional[1]`
 | 123 | 123 | 123 | 123 | 
 | 1 | 1 | 1 | 1 |
 
-`r if(tibble_final$FormFill[[1]] == "Sí") {"\\end{comment}"}`
+`r if(!params$var_comment) {"\\end{comment}"}`
