@@ -243,7 +243,6 @@ head(tibble_final, 5)
 ## IV. Rendering 1 Informe PDF por cada sesión de tibble_final
 
 ```{r, include = FALSE}
-rending <- TRUE
 
 # IMC: PENDIENTE Ajustar cálculo según disponibilidad de variables
 imc <- as.numeric(tibble_final$Weight[[1]])/ (as.numeric(tibble_final$Height[[1]])/100)^2
@@ -253,7 +252,6 @@ trauma <- if_else(tibble_final$Trauma[[1]] == "Sí", TRUE, FALSE)
 
 rmarkdown::render('Infos_Diagnostico.Rmd',
                   params = list(
-                    var_comment = rending,
                     Professional = tibble_final$Professional[[1]],
                     ID_Code = tibble_final$ID_Code[[1]],
                     Genre = tibble_final$Genre[[1]],
